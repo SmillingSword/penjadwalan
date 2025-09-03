@@ -35,6 +35,13 @@ class UpdateEventRequest extends FormRequest
             'exdates' => 'nullable|array',
             'exdates.*' => 'date',
             'is_private' => 'boolean',
+            'participants' => 'nullable|array|max:100',
+            'participants.*.email' => 'required_with:participants|email|max:255',
+            'participants.*.name' => 'nullable|string|max:255',
+            'participants.*.role' => 'nullable|in:required,optional,resource',
+            'reminders' => 'nullable|array|max:10',
+            'reminders.*.method' => 'required_with:reminders|in:email,popup,sms',
+            'reminders.*.minutes_before' => 'required_with:reminders|integer|min:0|max:43200', // Max 30 days
         ];
     }
 
@@ -49,6 +56,10 @@ class UpdateEventRequest extends FormRequest
             'end_at.after' => 'End time must be after start time.',
             'meeting_link.url' => 'Meeting link must be a valid URL.',
             'timezone.in' => 'Invalid timezone provided.',
+            'participants.max' => 'Cannot add more than 100 participants.',
+            'participants.*.email.email' => 'Participant email must be valid.',
+            'reminders.max' => 'Cannot add more than 10 reminders.',
+            'reminders.*.minutes_before.max' => 'Reminder cannot be set more than 30 days before the event.',
         ];
     }
 
@@ -57,6 +68,13 @@ class UpdateEventRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        // Set default timezone if not provided but datetime fields are being updated
+        if (($this->has('start_at') || $this->has('end_at')) && !$this->has('timezone')) {
+            $this->merge([
+                'timezone' => Auth::user()->timezone ?? 'Asia/Jakarta'
+            ]);
+        }
+
         // Convert all_day to boolean if provided
         if ($this->has('all_day')) {
             $this->merge([

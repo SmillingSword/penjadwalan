@@ -65,10 +65,10 @@ class CalendarCrudTest extends TestCase
         ]);
 
         $response->assertStatus(201);
-        $response->assertJsonPath('name', 'Test Calendar');
-        $response->assertJsonPath('color', '#FF0000');
-        $response->assertJsonPath('organization_id', $this->organization->id);
-        $response->assertJsonPath('owner_user_id', $this->user->id);
+        $response->assertJsonPath('data.name', 'Test Calendar');
+        $response->assertJsonPath('data.color', '#FF0000');
+        $response->assertJsonPath('data.organization_id', $this->organization->id);
+        $response->assertJsonPath('data.owner_user_id', $this->user->id);
 
         $this->assertDatabaseHas('calendars', [
             'name' => 'Test Calendar',
@@ -91,8 +91,8 @@ class CalendarCrudTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJsonPath('id', $calendar->id);
-        $response->assertJsonPath('name', 'Test Calendar');
+        $response->assertJsonPath('data.id', $calendar->id);
+        $response->assertJsonPath('data.name', 'Test Calendar');
     }
 
     public function test_user_can_update_calendar()
@@ -115,8 +115,8 @@ class CalendarCrudTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJsonPath('name', 'Updated Name');
-        $response->assertJsonPath('color', '#00FF00');
+        $response->assertJsonPath('data.name', 'Updated Name');
+        $response->assertJsonPath('data.color', '#00FF00');
 
         $this->assertDatabaseHas('calendars', [
             'id' => $calendar->id,
@@ -187,7 +187,7 @@ class CalendarCrudTest extends TestCase
             'X-Organization-ID' => $this->organization->id
         ]);
 
-        $response->assertStatus(404); // Should not be found due to tenant isolation
+        $response->assertStatus(403); // Should be forbidden due to tenant isolation
     }
 
     public function test_member_cannot_create_calendar()

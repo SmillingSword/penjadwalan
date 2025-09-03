@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreCalendarRequest;
+use App\Http\Requests\UpdateCalendarRequest;
+use App\Http\Resources\CalendarResource;
+use App\Http\Resources\EventResource;
 use App\Models\Calendar;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Carbon\Carbon;
 
 class CalendarController extends Controller
 {
@@ -16,7 +21,7 @@ class CalendarController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Calendar::class);
 
@@ -26,43 +31,26 @@ class CalendarController extends Controller
             ->with(['owner', 'organization'])
             ->paginate(15);
 
-        return response()->json($calendars);
+        return CalendarResource::collection($calendars);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreCalendarRequest $request): CalendarResource
     {
         $this->authorize('create', Calendar::class);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'color' => 'nullable|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
-            'is_default' => 'boolean',
-            'is_public' => 'boolean',
-        ]);
-
-        $calendar = Calendar::create([
-            'organization_id' => $request->get('current_organization_id'),
-            'owner_user_id' => Auth::id(),
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? null,
-            'color' => $validated['color'] ?? '#3B82F6',
-            'is_default' => $validated['is_default'] ?? false,
-            'is_public' => $validated['is_public'] ?? false,
-        ]);
-
+        $calendar = Calendar::create($request->getValidatedData());
         $calendar->load(['owner', 'organization']);
 
-        return response()->json($calendar, 201);
+        return new CalendarResource($calendar);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Calendar $calendar): JsonResponse
+    public function show(Calendar $calendar): CalendarResource
     {
         $this->authorize('view', $calendar);
 
@@ -70,28 +58,20 @@ class CalendarController extends Controller
             $query->with(['participants', 'reminders']);
         }]);
 
-        return response()->json($calendar);
+        return new CalendarResource($calendar);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Calendar $calendar): JsonResponse
+    public function update(UpdateCalendarRequest $request, Calendar $calendar): CalendarResource
     {
         $this->authorize('update', $calendar);
 
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'color' => 'nullable|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
-            'is_default' => 'boolean',
-            'is_public' => 'boolean',
-        ]);
-
-        $calendar->update($validated);
+        $calendar->update($request->validated());
         $calendar->load(['owner', 'organization']);
 
-        return response()->json($calendar);
+        return new CalendarResource($calendar);
     }
 
     /**
@@ -103,26 +83,34 @@ class CalendarController extends Controller
 
         $calendar->delete();
 
-        return response()->json(['message' => 'Calendar deleted successfully']);
+        return response()->json([
+            'message' => 'Calendar deleted successfully'
+        ]);
     }
 
     /**
      * Get events for a specific calendar within a date range.
      */
-    public function events(Request $request, Calendar $calendar): JsonResponse
+    public function events(Request $request, Calendar $calendar): AnonymousResourceCollection
     {
         $this->authorize('view', $calendar);
 
         $validated = $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
+            'timezone' => 'nullable|string|in:' . implode(',', timezone_identifiers_list()),
         ]);
 
+        // Convert dates to UTC for database query
+        $timezone = $validated['timezone'] ?? $request->user()->timezone ?? 'Asia/Jakarta';
+        $startDate = Carbon::parse($validated['start_date'], $timezone)->utc();
+        $endDate = Carbon::parse($validated['end_date'], $timezone)->utc();
+
         $events = $calendar->events()
-            ->whereBetween('start_at', [$validated['start_date'], $validated['end_date']])
-            ->with(['participants', 'reminders'])
+            ->whereBetween('start_at', [$startDate, $endDate])
+            ->with(['participants', 'reminders', 'calendar'])
             ->get();
 
-        return response()->json($events);
+        return EventResource::collection($events);
     }
 }

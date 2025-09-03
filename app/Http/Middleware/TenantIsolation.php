@@ -34,7 +34,7 @@ class TenantIsolation
         }
 
         // Check if user belongs to the organization
-        if (!$user->organizations()->where('organization_id', $organizationId)->exists()) {
+        if (!$user->organizations()->where('organizations.id', $organizationId)->exists()) {
             return response()->json(['error' => 'Access denied to this organization'], 403);
         }
 
