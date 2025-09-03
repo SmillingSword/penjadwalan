@@ -152,7 +152,7 @@ class TenantIsolationTest extends TestCase
             'X-Organization-ID' => 'some-uuid'
         ]);
         $response->assertStatus(401);
-        $response->assertJson(['error' => 'Unauthenticated']);
+        $response->assertJson(['message' => 'Unauthenticated.']);
     }
 
     public function test_user_can_access_multiple_organizations_they_belong_to()

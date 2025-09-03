@@ -29,7 +29,7 @@ class StoreEventRequest extends FormRequest
             'location' => 'nullable|string|max:255',
             'meeting_link' => 'nullable|url|max:500',
             'start_at' => 'required|date',
-            'end_at' => 'nullable|date|after:start_at',
+            'end_at' => 'required|date|after_or_equal:start_at',
             'all_day' => 'boolean',
             'timezone' => 'nullable|string|max:64|in:' . implode(',', timezone_identifiers_list()),
             'rrule' => 'nullable|string|max:500',
@@ -41,7 +41,7 @@ class StoreEventRequest extends FormRequest
             'participants.*.name' => 'nullable|string|max:255',
             'participants.*.role' => 'nullable|in:required,optional,resource',
             'reminders' => 'nullable|array|max:10',
-            'reminders.*.method' => 'required_with:reminders|in:email,popup,sms',
+            'reminders.*.method' => 'required_with:reminders|in:email,push',
             'reminders.*.minutes_before' => 'required_with:reminders|integer|min:0|max:43200', // Max 30 days
         ];
     }
@@ -56,7 +56,7 @@ class StoreEventRequest extends FormRequest
             'calendar_id.exists' => 'Selected calendar does not exist.',
             'title.required' => 'Event title is required.',
             'title.max' => 'Event title cannot exceed 255 characters.',
-            'end_at.after' => 'End time must be after start time.',
+            'end_at.after_or_equal' => 'End time must be after or equal to start time.',
             'meeting_link.url' => 'Meeting link must be a valid URL.',
             'timezone.in' => 'Invalid timezone provided.',
             'participants.max' => 'Cannot add more than 100 participants.',

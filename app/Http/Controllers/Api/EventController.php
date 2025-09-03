@@ -111,7 +111,7 @@ class EventController extends Controller
                     'email' => $participant['email'],
                     'name' => $participant['name'] ?? null,
                     'role' => $participant['role'] ?? 'required',
-                    'status' => 'pending',
+                    'status' => 'invited',
                 ]);
             }
         }
@@ -218,7 +218,7 @@ class EventController extends Controller
                 'email' => $participant['email'],
                 'name' => $participant['name'] ?? null,
                 'role' => $participant['role'] ?? 'required',
-                'status' => $participant['status'] ?? 'pending',
+                'status' => $participant['status'] ?? 'invited',
             ]);
         }
 

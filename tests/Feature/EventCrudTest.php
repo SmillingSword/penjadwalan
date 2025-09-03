@@ -47,9 +47,10 @@ class EventCrudTest extends TestCase
 
     public function test_user_can_list_events()
     {
-        // Create some events
+        // Create some events (ensure they are public so they show up in the list)
         Event::factory()->count(3)->create([
             'calendar_id' => $this->calendar->id,
+            'is_private' => false, // Ensure events are public
         ]);
 
         $response = $this->getJson('/api/events', [
@@ -91,7 +92,7 @@ class EventCrudTest extends TestCase
                     'minutes_before' => 15,
                 ],
                 [
-                    'method' => 'popup',
+                    'method' => 'push',
                     'minutes_before' => 5,
                 ]
             ]
@@ -102,9 +103,9 @@ class EventCrudTest extends TestCase
         ]);
 
         $response->assertStatus(201);
-        $response->assertJsonPath('title', 'Test Event');
-        $response->assertJsonPath('location', 'Test Location');
-        $response->assertJsonPath('calendar_id', $this->calendar->id);
+        $response->assertJsonPath('data.title', 'Test Event');
+        $response->assertJsonPath('data.location', 'Test Location');
+        $response->assertJsonPath('data.calendar_id', $this->calendar->id);
 
         // Check that event was created in database
         $this->assertDatabaseHas('events', [
@@ -117,12 +118,18 @@ class EventCrudTest extends TestCase
             'email' => 'participant1@example.com',
             'name' => 'Participant 1',
             'role' => 'required',
+            'status' => 'invited',
         ]);
 
         // Check that reminders were created
         $this->assertDatabaseHas('reminders', [
             'method' => 'email',
             'minutes_before' => 15,
+        ]);
+
+        $this->assertDatabaseHas('reminders', [
+            'method' => 'push',
+            'minutes_before' => 5,
         ]);
     }
 
@@ -140,8 +147,8 @@ class EventCrudTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJsonPath('id', $event->id);
-        $response->assertJsonPath('title', 'Test Event');
+        $response->assertJsonPath('data.id', $event->id);
+        $response->assertJsonPath('data.title', 'Test Event');
     }
 
     public function test_user_can_update_event()
@@ -166,8 +173,8 @@ class EventCrudTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJsonPath('title', 'Updated Title');
-        $response->assertJsonPath('location', 'Updated Location');
+        $response->assertJsonPath('data.title', 'Updated Title');
+        $response->assertJsonPath('data.location', 'Updated Location');
 
         $this->assertDatabaseHas('events', [
             'id' => $event->id,
@@ -249,7 +256,7 @@ class EventCrudTest extends TestCase
             'email' => 'old@example.com',
             'name' => 'Old Participant',
             'role' => 'required',
-            'status' => 'pending',
+            'status' => 'invited',
         ]);
 
         $participantsData = [
@@ -272,7 +279,8 @@ class EventCrudTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $response->assertJson(['message' => 'Participants updated successfully']);
+        $response->assertJsonPath('data.participants.0.email', 'new1@example.com');
+        $response->assertJsonPath('data.participants.1.email', 'new2@example.com');
 
         // Check that old participant was removed
         $this->assertDatabaseMissing('event_participants', [
@@ -318,7 +326,7 @@ class EventCrudTest extends TestCase
             'X-Organization-ID' => $this->organization->id
         ]);
 
-        $response->assertStatus(404); // Should not be found due to tenant isolation
+        $response->assertStatus(403); // Should be forbidden due to tenant isolation
     }
 
     public function test_all_day_event_validation()
@@ -336,6 +344,6 @@ class EventCrudTest extends TestCase
         ]);
 
         $response->assertStatus(201);
-        $response->assertJsonPath('all_day', true);
+        $response->assertJsonPath('data.all_day', true);
     }
 }
