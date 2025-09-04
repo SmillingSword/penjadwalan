@@ -1,54 +1,50 @@
-# Calendar & Scheduling Application - Implementation Progress
+# Chat System Enhancement Plan
 
-## Phase 1: Foundation & Database Schema (Week 1-2)
+## Current Issues
+- RealTimeChatManager.vue uses wrong endpoint for updateUserOnlineStatus
+- Chat lacks "cool" real-time features
+- RealTimeChatController exists but has no routes defined
 
-### 1.1 Database Schema Updates
-- [x] Update users table migration (add timezone, locale, UUID)
-- [x] Create calendars table migration with organization relationship
-- [x] Update events table migration with full schema (UUID, timezone, rrule, etc.)
-- [x] Create event_participants table migration
-- [x] Create reminders table migration
-- [x] Create free_busy_blocks table migration
-- [x] Create audit_logs table migration
-- [x] Create webhook_subscriptions table migration
+## Plan
 
-### 1.2 Model Updates & Relationships
-- [ ] Update User model (UUID, timezone, locale, organization relationships)
-- [ ] Create Calendar model with proper relationships
-- [ ] Update Event model with full schema and relationships
-- [ ] Create EventParticipant model
-- [ ] Create Reminder model
-- [ ] Create FreeBusyBlock model
-- [ ] Create AuditLog model
-- [ ] Create WebhookSubscription model
+### 1. Fix Endpoint Issue
+- [x] Add routes for RealTimeChatController in routes/api.php under '/api/realtime-chat' prefix
+- [x] Update RealTimeChatManager.vue to use correct endpoint: '/api/realtime-chat/online-status'
+- [ ] Update other API calls in RealTimeChatManager.vue to use realtime endpoints
 
-### 1.3 Authentication & Tenant Isolation
-- [ ] Implement Sanctum API authentication middleware
-- [ ] Create tenant isolation middleware
-- [ ] Set up policies for Calendar and Event access
-- [ ] Create role seeder (Owner, Admin, Member)
-- [ ] Update API routes with auth:sanctum protection
+### 2. Enhance Real-time Features
+- [ ] Improve typing indicators with animations
+- [ ] Add message read receipts
+- [ ] Better online status display with timestamps
+- [ ] Enhanced sound notifications
+- [ ] Smooth animations for message appearance
+- [ ] File upload progress indicators
+- [ ] Better error handling for broadcasting failures
 
-### 1.4 API Controllers & Validation
-- [ ] Create CalendarController with full CRUD
-- [ ] Update EventController with comprehensive validation
-- [ ] Create Form Requests for validation
-- [ ] Create API Resources for serialization
-- [ ] Implement timezone-aware date handling
+### 3. UI/UX Improvements
+- [ ] Add typing animation dots
+- [ ] Message delivery/read status icons
+- [ ] Online status badges with colors
+- [ ] Smooth message transitions
+- [ ] Better chat bubble styling
+- [ ] Notification badges for unread messages
 
-### 1.5 Testing & Quality
-- [ ] Create feature tests for tenant isolation
-- [ ] Create feature tests for Calendar/Event CRUD
-- [ ] Create unit tests for models
-- [ ] Set up OpenAPI documentation draft
-- [ ] Verify no cross-tenant data leakage
+### 4. Testing
+- [ ] Test real-time functionality
+- [ ] Test endpoint changes
+- [ ] Test enhanced features
 
-## Exit Criteria Phase 1
-- [ ] 0 P0/P1 issues in staging
-- [ ] All core endpoints pass Feature/Pest tests
-- [ ] No cross-tenant data leakage (proven by tests)
-- [ ] All API routes protected with auth:sanctum
-- [ ] Tenant isolation middleware active
-- [ ] Policies functioning correctly
+## Files to Modify
+- routes/api.php
+- resources/js/Components/Chat/RealTimeChatManager.vue
+- resources/js/Components/Chat/FloatingChatBox.vue
+- resources/js/Components/Chat/ChatSidebar.vue
+- app/Http/Controllers/Api/RealTimeChatController.php (if needed)
 
-## Current Status: Starting Phase 1
+## Next Steps
+1. Add RealTimeChatController routes
+2. Update endpoint in RealTimeChatManager.vue
+3. Enhance typing indicators
+4. Add read receipts
+5. Improve UI styling
+6. Test all changes

@@ -14,10 +14,14 @@ class Reminder extends Model
         'event_id',
         'method',
         'minutes_before',
+        'sent_at',
+        'reminder_type',
+        'is_automatic',
     ];
 
     protected $casts = [
         'minutes_before' => 'integer',
+        'sent_at' => 'datetime',
     ];
 
     public function event(): BelongsTo
