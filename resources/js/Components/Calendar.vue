@@ -689,12 +689,18 @@ const availableYears = computed(() => {
 
 // Methods
 const getEventsForDay = (day) => {
-  return events.value.filter(event => event.date === day.fullDate).slice(0, 3)
+  return events.value.filter(event => {
+    // Use the date field that's already converted to local timezone by backend
+    return event.date === day.fullDate
+  }).slice(0, 3)
 }
 
 const getAllEventsForDay = (day) => {
   if (!day) return []
-  return events.value.filter(event => event.date === day.fullDate)
+  return events.value.filter(event => {
+    // Use the date field that's already converted to local timezone by backend
+    return event.date === day.fullDate
+  })
 }
 
 const selectDate = (day) => {
@@ -950,6 +956,39 @@ const changeView = (view) => {
 }
 
 const formatEventTime = (event) => {
+  // Handle different event data formats
+  if (event.start_date) {
+    // If we have start_date from API, parse it properly
+    const startDate = new Date(event.start_date)
+    const endDate = event.end_date ? new Date(event.end_date) : null
+    
+    // Format date in local timezone
+    const dateStr = startDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric', 
+      month: 'long',
+      day: 'numeric'
+    })
+    
+    const timeStr = startDate.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+    
+    if (endDate) {
+      const endTimeStr = endDate.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit', 
+        hour12: true
+      })
+      return `${dateStr} from ${timeStr} to ${endTimeStr}`
+    }
+    
+    return `${dateStr} at ${timeStr}`
+  }
+  
+  // Fallback for legacy format
   return `${event.date} at ${event.time}`
 }
 
