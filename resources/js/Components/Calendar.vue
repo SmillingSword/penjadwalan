@@ -12,7 +12,12 @@
       <div class="relative z-10">
         <div class="flex items-center justify-between mb-4">
           <div class="animate-slide-in-left">
-            <h2 class="text-2xl font-bold mb-1">{{ currentMonthYear }}</h2>
+            <h2 
+              class="text-2xl font-bold mb-1 cursor-pointer hover:text-indigo-200 transition-colors duration-200 select-none"
+              @click="openDatePicker"
+            >
+              {{ currentMonthYear }}
+            </h2>
             <p class="text-indigo-100">Manage your schedule like a pro</p>
           </div>
           
@@ -459,6 +464,106 @@
       </div>
     </div>
 
+    <!-- Date Picker Modal -->
+    <div v-if="showDatePickerModal" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-75 backdrop-blur-sm" @click="closeDatePicker"></div>
+        
+        <div class="inline-block w-full max-w-md p-0 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl rounded-3xl animate-modal-appear">
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-6 py-4 text-white relative overflow-hidden">
+            <div class="absolute inset-0 opacity-20">
+              <div class="floating-circle absolute top-2 right-4 w-8 h-8 bg-white rounded-full animate-float"></div>
+              <div class="floating-circle absolute bottom-2 left-6 w-6 h-6 bg-white rounded-full animate-float-delayed"></div>
+            </div>
+            <div class="relative z-10 flex items-center justify-between">
+              <h3 class="text-xl font-bold">Select Date</h3>
+              <button @click="closeDatePicker" class="text-white hover:text-indigo-200 hover:scale-110 transition-all duration-200">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Content -->
+          <div class="p-6 space-y-6">
+            <!-- Year Selection -->
+            <div class="space-y-3">
+              <label class="block text-sm font-semibold text-gray-700">Year</label>
+              <div class="relative">
+                <select 
+                  v-model="selectedYear" 
+                  class="w-full px-4 py-3 text-lg font-medium bg-gradient-to-r from-gray-50 to-blue-50 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 appearance-none cursor-pointer hover:border-indigo-300"
+                >
+                  <option v-for="year in availableYears" :key="year" :value="year">
+                    {{ year }}
+                  </option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
+                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Month Selection -->
+            <div class="space-y-3">
+              <label class="block text-sm font-semibold text-gray-700">Month</label>
+              <div class="grid grid-cols-3 gap-3">
+                <button
+                  v-for="(month, index) in monthNames"
+                  :key="index"
+                  @click="selectedMonth = index"
+                  :class="[
+                    'px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 transform hover:scale-105',
+                    selectedMonth === index
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gradient-to-r hover:from-indigo-100 hover:to-purple-100 hover:text-indigo-700'
+                  ]"
+                >
+                  {{ month }}
+                </button>
+              </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="flex space-x-3">
+              <button 
+                @click="goToCurrentDate"
+                class="flex-1 px-4 py-3 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all duration-200 hover:scale-105"
+              >
+                Today
+              </button>
+              <button 
+                @click="goToNextYear"
+                class="flex-1 px-4 py-3 text-sm font-medium text-purple-600 bg-purple-50 rounded-xl hover:bg-purple-100 transition-all duration-200 hover:scale-105"
+              >
+                Next Year
+              </button>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div class="px-6 py-4 bg-gray-50 rounded-b-3xl flex justify-end space-x-3">
+            <button 
+              @click="closeDatePicker"
+              class="px-6 py-2 text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200"
+            >
+              Cancel
+            </button>
+            <button 
+              @click="applyDateSelection"
+              class="px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Notifications -->
     <Toast />
   </div>
@@ -476,10 +581,16 @@ const showEventModal = ref(false)
 const showCreateModal = ref(false)
 const showConfirmModal = ref(false)
 const showDayEventsModal = ref(false)
+const showDatePickerModal = ref(false)
 const selectedEvent = ref(null)
 const selectedDate = ref(null)
 const selectedDayForEvents = ref(null)
 const eventToDelete = ref(null)
+
+// Date picker variables
+const selectedYear = ref(new Date().getFullYear())
+const selectedMonth = ref(new Date().getMonth())
+const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 const newEvent = reactive({
   title: '',
@@ -564,6 +675,16 @@ const upcomingEventsCount = computed(() => {
 const completedEventsCount = computed(() => {
   const today = new Date().toISOString().split('T')[0]
   return events.value.filter(event => event.date < today).length
+})
+
+// Date picker computed properties
+const availableYears = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const years = []
+  for (let year = currentYear - 10; year <= currentYear + 10; year++) {
+    years.push(year)
+  }
+  return years
 })
 
 // Methods
@@ -953,6 +1074,32 @@ const handleSwipeGesture = () => {
     // Swipe left - go to next month
     nextMonth()
   }
+}
+
+// Date picker methods
+const openDatePicker = () => {
+  selectedYear.value = currentDate.value.getFullYear()
+  selectedMonth.value = currentDate.value.getMonth()
+  showDatePickerModal.value = true
+}
+
+const closeDatePicker = () => {
+  showDatePickerModal.value = false
+}
+
+const goToCurrentDate = () => {
+  const today = new Date()
+  selectedYear.value = today.getFullYear()
+  selectedMonth.value = today.getMonth()
+}
+
+const goToNextYear = () => {
+  selectedYear.value = selectedYear.value + 1
+}
+
+const applyDateSelection = () => {
+  currentDate.value = new Date(selectedYear.value, selectedMonth.value, 1)
+  closeDatePicker()
 }
 
 // API functions
