@@ -84,7 +84,7 @@ class DashboardController extends Controller
                     'id' => $event->id,
                     'title' => $event->title,
                     'time' => $localStartTime->format('h:i A'),
-                    'date' => $localStartTime->format('M d'),
+                    'date' => $localStartTime->format('Y-m-d'),
                     'location' => $event->location ?? 'No location',
                     'color' => $event->calendar->color ?? '#3B82F6'
                 ];
