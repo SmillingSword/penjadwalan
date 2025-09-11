@@ -8,6 +8,11 @@ use App\Http\Requests\UpdateEventRequest;
 use App\Http\Resources\EventResource;
 use App\Models\Event;
 use App\Models\Calendar;
+use App\Events\EventCreated;
+use App\Events\EventUpdated;
+use App\Events\EventDeleted;
+use App\Services\ReminderSchedulingService;
+use App\Services\RealTimeReminderService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -116,14 +121,25 @@ class EventController extends Controller
             }
         }
 
-        // Add reminders if provided
+        // Add custom reminders if provided
         if (isset($validated['reminders'])) {
             foreach ($validated['reminders'] as $reminder) {
                 $event->reminders()->create($reminder);
             }
         }
 
+        // Create automatic real-time reminders
+        $realTimeReminderService = app(RealTimeReminderService::class);
+        $realTimeReminderService->createAutomaticReminders($event);
+
         $event->load(['calendar', 'participants', 'reminders']);
+
+        // Schedule all reminders (custom + automatic)
+        $reminderService = app(ReminderSchedulingService::class);
+        $reminderService->scheduleEventReminders($event);
+
+        // Broadcast event creation
+        broadcast(new EventCreated($event));
 
         return new EventResource($event);
     }
@@ -174,8 +190,20 @@ class EventController extends Controller
             }
         }
 
+        // Track changes for broadcasting
+        $changes = array_keys($validated);
+        
         $event->update($validated);
         $event->load(['calendar', 'participants', 'reminders']);
+
+        // Reschedule reminders if event time changed
+        if (in_array('start_at', $changes) || in_array('end_at', $changes)) {
+            $reminderService = app(ReminderSchedulingService::class);
+            $reminderService->rescheduleEventReminders($event);
+        }
+
+        // Broadcast event update
+        broadcast(new EventUpdated($event, $changes));
 
         return new EventResource($event);
     }
@@ -187,7 +215,20 @@ class EventController extends Controller
     {
         $this->authorize('delete', $event);
 
+        // Store event data for broadcasting before deletion
+        $eventId = $event->id;
+        $organizationId = $event->calendar->organization_id;
+        $calendarId = $event->calendar_id;
+        $eventTitle = $event->title;
+
+        // Cancel scheduled reminders
+        $reminderService = app(ReminderSchedulingService::class);
+        $reminderService->cancelEventReminders($event);
+
         $event->delete();
+
+        // Broadcast event deletion
+        broadcast(new EventDeleted($eventId, $organizationId, $calendarId, $eventTitle));
 
         return response()->json([
             'message' => 'Event deleted successfully'
@@ -206,7 +247,7 @@ class EventController extends Controller
             'participants.*.email' => 'required|email|max:255',
             'participants.*.name' => 'nullable|string|max:255',
             'participants.*.role' => 'nullable|in:required,optional,resource',
-            'participants.*.status' => 'nullable|in:pending,accepted,declined,tentative',
+            'participants.*.status' => 'nullable|in:invited,accepted,declined,tentative',
         ]);
 
         // Remove existing participants

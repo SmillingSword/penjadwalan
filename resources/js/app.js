@@ -1,5 +1,7 @@
 import '../css/app.css';
 import './bootstrap';
+import './echo';
+/* Removed import of pusher-beams.js as user is not using Pusher Beams */
 
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';

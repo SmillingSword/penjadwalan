@@ -7,12 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Scout\Searchable;
 use Carbon\Carbon;
 use App\Services\RecurrenceService;
 
 class Event extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, Searchable;
 
     protected $fillable = [
         'calendar_id',
@@ -243,6 +244,43 @@ class Event extends Model
 
         $recurrenceService = app(RecurrenceService::class);
         return $recurrenceService->validateRRule($this->rrule);
+    }
+
+    /**
+     * Get the indexable data array for the model.
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'calendar_id' => $this->calendar_id,
+            'title' => $this->title,
+            'description_md' => $this->description_md,
+            'location' => $this->location,
+            'start_at' => $this->start_at?->timestamp,
+            'end_at' => $this->end_at?->timestamp,
+            'all_day' => $this->all_day,
+            'is_private' => $this->is_private,
+            'timezone' => $this->timezone,
+            'created_at' => $this->created_at?->timestamp,
+        ];
+    }
+
+    /**
+     * Determine if the model should be searchable.
+     */
+    public function shouldBeSearchable(): bool
+    {
+        // Only index public events or events that belong to the current user's organization
+        return !$this->is_private || $this->calendar->organization_id === request()->get('current_organization_id');
+    }
+
+    /**
+     * Get the Scout index name for the model.
+     */
+    public function searchableAs(): string
+    {
+        return 'events';
     }
 
     /**

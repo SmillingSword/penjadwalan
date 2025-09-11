@@ -27,7 +27,12 @@
         "@fullcalendar/rrule": "^6.1.19",
         "@fullcalendar/timegrid": "^6.1.19",
         "@fullcalendar/vue3": "^6.1.19",
+        "@heroicons/vue": "^2.0.18",
+        "@pusher/push-notifications-web": "^2.1.0",
         "@vueuse/core": "^13.9.0",
-        "luxon": "^3.7.1"
+        "laravel-echo": "^1.16.1",
+        "luxon": "^3.7.1",
+        "pusher-js": "^8.4.0-rc2",
+        "rrule": "^2.8.1"
     }
 }
