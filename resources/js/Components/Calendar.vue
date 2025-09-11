@@ -949,19 +949,9 @@ const handleSwipeGesture = () => {
   if (deltaX > 0) {
     // Swipe right - go to previous month
     previousMonth()
-    
-    // Show feedback toast
-    if (window.toast) {
-      window.toast.info('Previous Month', 'Swiped to previous month')
-    }
   } else {
     // Swipe left - go to next month
     nextMonth()
-    
-    // Show feedback toast
-    if (window.toast) {
-      window.toast.info('Next Month', 'Swiped to next month')
-    }
   }
 }
 
