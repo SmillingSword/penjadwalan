@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('title')->nullable(); // for group chats
             $table->text('description')->nullable();
             $table->string('avatar')->nullable(); // for group chats
-            $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
+            $table->foreignUuid('created_by')->constrained('users')->onDelete('cascade');
             $table->timestamp('last_message_at')->nullable();
             $table->json('settings')->nullable(); // chat settings like mute, etc
             $table->boolean('is_active')->default(true);
