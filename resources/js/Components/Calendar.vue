@@ -956,13 +956,60 @@ const changeView = (view) => {
 }
 
 const formatEventTime = (event) => {
-  // Handle different event data formats
+  // Use the timezone-converted data from EventResource
+  if (event.formatted_start && event.formatted_end) {
+    // Use the pre-formatted data from backend (already in user timezone)
+    const dateStr = event.formatted_start.full_date
+    const startTime = event.formatted_start.time_12h
+    const endTime = event.formatted_end.time_12h
+    
+    if (endTime && startTime !== endTime) {
+      return `${dateStr} from ${startTime} to ${endTime}`
+    }
+    
+    return `${dateStr} at ${startTime}`
+  }
+  
+  // Fallback: use the date and time fields (already converted by backend)
+  if (event.date && event.time) {
+    // Parse the date to get a readable format
+    const eventDate = new Date(event.date + 'T00:00:00')
+    const dateStr = eventDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric', 
+      month: 'long',
+      day: 'numeric'
+    })
+    
+    // Convert 24h time to 12h format
+    const [hours, minutes] = event.time.split(':')
+    const hour12 = new Date(`2000-01-01T${hours}:${minutes}:00`).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+    
+    let timeStr = `${dateStr} at ${hour12}`
+    
+    // Add end time if available
+    if (event.end_time) {
+      const [endHours, endMinutes] = event.end_time.split(':')
+      const endHour12 = new Date(`2000-01-01T${endHours}:${endMinutes}:00`).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
+      timeStr = `${dateStr} from ${hour12} to ${endHour12}`
+    }
+    
+    return timeStr
+  }
+  
+  // Legacy fallback for old format
   if (event.start_date) {
-    // If we have start_date from API, parse it properly
     const startDate = new Date(event.start_date)
     const endDate = event.end_date ? new Date(event.end_date) : null
     
-    // Format date in local timezone
     const dateStr = startDate.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric', 
@@ -988,8 +1035,7 @@ const formatEventTime = (event) => {
     return `${dateStr} at ${timeStr}`
   }
   
-  // Fallback for legacy format
-  return `${event.date} at ${event.time}`
+  return 'Time not available'
 }
 
 const showMoreEvents = (day) => {
