@@ -197,7 +197,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
-import { useForm } from '@inertiajs/vue3'
+import { useForm, usePage } from '@inertiajs/vue3'
 import Modal from '@/Components/Modal.vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import TextInput from '@/Components/TextInput.vue'
@@ -222,6 +222,22 @@ const recurrenceType = ref('')
 
 const isEditing = computed(() => !!props.event?.id)
 
+// Get user timezone from page props or detect browser timezone
+const getUserTimezone = () => {
+  const page = usePage()
+  const userTimezone = page.props?.auth?.user?.timezone
+  if (userTimezone) return userTimezone
+  
+  // Fallback to browser timezone detection
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone
+  } catch (e) {
+    return 'Asia/Jakarta' // Final fallback
+  }
+}
+
+const userTimezone = getUserTimezone()
+
 const form = reactive({
   calendar_id: '',
   title: '',
@@ -231,7 +247,7 @@ const form = reactive({
   start_at: '',
   end_at: '',
   all_day: false,
-  timezone: 'Asia/Jakarta',
+  timezone: userTimezone,
   rrule: '',
   is_private: false,
 })
@@ -245,10 +261,10 @@ watch(() => props.event, (newEvent) => {
       description_md: newEvent.description_md || '',
       location: newEvent.location || '',
       meeting_link: newEvent.meeting_link || '',
-      start_at: newEvent.start_at ? formatDateTimeLocal(newEvent.start_at) : '',
-      end_at: newEvent.end_at ? formatDateTimeLocal(newEvent.end_at) : '',
+      start_at: newEvent.start_at ? formatDateTimeLocalFromUserTimezone(newEvent.start_at, newEvent.user_timezone || newEvent.timezone) : '',
+      end_at: newEvent.end_at ? formatDateTimeLocalFromUserTimezone(newEvent.end_at, newEvent.user_timezone || newEvent.timezone) : '',
       all_day: newEvent.all_day || false,
-      timezone: newEvent.timezone || 'Asia/Jakarta',
+      timezone: newEvent.user_timezone || newEvent.timezone || userTimezone,
       rrule: newEvent.rrule || '',
       is_private: newEvent.is_private || false,
     })
@@ -275,6 +291,30 @@ watch(() => props.selectedDate, (newDate) => {
   }
 })
 
+/**
+ * Format datetime for datetime-local input from user timezone
+ * This function converts the timezone-aware datetime to browser local time
+ * for proper display in datetime-local inputs
+ */
+function formatDateTimeLocalFromUserTimezone(dateString, eventTimezone) {
+  try {
+    // Parse the datetime string which is already in user's timezone
+    const dt = DateTime.fromISO(dateString, { zone: eventTimezone || userTimezone })
+    
+    // Convert to browser's local timezone for datetime-local input
+    const localDt = dt.setZone('local')
+    
+    return localDt.toFormat("yyyy-MM-dd'T'HH:mm")
+  } catch (error) {
+    console.warn('Error formatting datetime:', error)
+    // Fallback to simple ISO format
+    return DateTime.fromISO(dateString).toFormat("yyyy-MM-dd'T'HH:mm")
+  }
+}
+
+/**
+ * Legacy function for backward compatibility
+ */
 function formatDateTimeLocal(dateString) {
   return DateTime.fromISO(dateString).toFormat("yyyy-MM-dd'T'HH:mm")
 }
@@ -289,7 +329,7 @@ function resetForm() {
     start_at: '',
     end_at: '',
     all_day: false,
-    timezone: 'Asia/Jakarta',
+    timezone: userTimezone,
     rrule: '',
     is_private: false,
   })
@@ -323,6 +363,20 @@ async function submitForm() {
     const url = isEditing.value ? `/api/events/${props.event.id}` : '/api/events'
     const method = isEditing.value ? 'PUT' : 'POST'
 
+    // Prepare form data with proper timezone handling
+    const formData = { ...form }
+    
+    // Convert datetime-local values to the selected timezone
+    if (formData.start_at) {
+      const startDt = DateTime.fromFormat(formData.start_at, "yyyy-MM-dd'T'HH:mm", { zone: 'local' })
+      formData.start_at = startDt.setZone(formData.timezone).toISO()
+    }
+    
+    if (formData.end_at) {
+      const endDt = DateTime.fromFormat(formData.end_at, "yyyy-MM-dd'T'HH:mm", { zone: 'local' })
+      formData.end_at = endDt.setZone(formData.timezone).toISO()
+    }
+
     const response = await fetch(url, {
       method,
       headers: {
@@ -330,7 +384,7 @@ async function submitForm() {
         'Accept': 'application/json',
         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
       },
-      body: JSON.stringify(form),
+      body: JSON.stringify(formData),
     })
 
     if (response.ok) {
