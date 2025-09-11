@@ -106,37 +106,21 @@ class DashboardController extends Controller
         // Get chat data for ChatManager - simplified approach
         $conversations = collect(); // Empty for now, will be loaded via API
         
-        // Get all users for chat (online and offline)
+        // Get all users for chat (online and offline) - using only existing columns
         $allUsers = User::where('id', '!=', $user->id)
-            ->select('id', 'name', 'email', 'avatar', 'online_status', 'status_message', 'last_seen_at', 'is_online')
-            ->orderByRaw('is_online DESC, IFNULL(last_seen_at, "1970-01-01") DESC')
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
             ->get()
             ->map(function($chatUser) {
-                // More flexible online status logic for initial load
-                // Consider user online if:
-                // 1. is_online is true, OR
-                // 2. last_seen_at is within 15 minutes (more generous), OR
-                // 3. Show all users but mark their actual status
-                $recentlyActive = $chatUser->last_seen_at && $chatUser->last_seen_at >= now()->subMinutes(15);
-                $isOnline = $chatUser->is_online || $recentlyActive;
-                
-                // Determine actual online status for display
-                $actualOnlineStatus = 'offline';
-                if ($chatUser->is_online) {
-                    $actualOnlineStatus = $chatUser->online_status ?? 'available';
-                } elseif ($recentlyActive) {
-                    $actualOnlineStatus = 'away';
-                }
-                
                 return [
                     'id' => $chatUser->id,
                     'name' => $chatUser->name,
                     'email' => $chatUser->email,
-                    'avatar' => $chatUser->avatar ?: '/default-avatar.png',
-                    'online_status' => $actualOnlineStatus,
-                    'status_message' => $chatUser->status_message,
-                    'last_seen_at' => $chatUser->last_seen_at,
-                    'is_online' => $isOnline,
+                    'avatar' => '/default-avatar.png',
+                    'online_status' => 'offline',
+                    'status_message' => null,
+                    'last_seen_at' => null,
+                    'is_online' => false,
                 ];
             });
 
