@@ -761,7 +761,18 @@ const saveEvent = async () => {
       window.toast.info(`${actionText} Event...`, `Please wait while we save your event.`)
     }
 
-    // Prepare event data for API
+    // Get user timezone (same logic as EventModal)
+    const getUserTimezone = () => {
+      try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone
+      } catch (e) {
+        return 'Asia/Jakarta' // Final fallback
+      }
+    }
+    
+    const userTimezone = getUserTimezone()
+
+    // Prepare event data for API with proper timezone handling
     let startDateTime = newEvent.start_time 
       ? `${newEvent.date} ${newEvent.start_time}:00`
       : `${newEvent.date} 09:00:00`
@@ -788,7 +799,7 @@ const saveEvent = async () => {
       : '/api/dashboard/events'
     const method = isEditing ? 'PUT' : 'POST'
 
-    // Send data to backend API
+    // Send data to backend API with timezone information
     const response = await fetch(url, {
       method: method,
       headers: {
@@ -798,11 +809,12 @@ const saveEvent = async () => {
       },
       body: JSON.stringify({
         title: newEvent.title,
-        start_date: startDateTime,
-        end_date: endDateTime,
-        description: newEvent.description || null,
+        start_at: startDateTime,
+        end_at: endDateTime,
+        timezone: userTimezone,
+        description_md: newEvent.description || null,
         all_day: false,
-        status: 'confirmed'
+        is_private: false
       })
     })
 

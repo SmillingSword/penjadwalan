@@ -191,9 +191,12 @@ class DashboardController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'description' => 'nullable|string|max:1000',
+            'start_at' => 'required|date',
+            'end_at' => 'required|date|after_or_equal:start_at',
+            'timezone' => 'nullable|string|max:64',
+            'description_md' => 'nullable|string|max:1000',
+            'all_day' => 'boolean',
+            'is_private' => 'boolean',
         ]);
 
         try {
@@ -236,31 +239,32 @@ class DashboardController extends Controller
                     ]);
                 }
 
-                // Get user timezone, default to Asia/Jakarta (WIB)
-                $userTimezone = $user->timezone ?? 'Asia/Jakarta';
+                // Get timezone from request or user preference, default to Asia/Jakarta
+                $timezone = $validated['timezone'] ?? $user->timezone ?? 'Asia/Jakarta';
                 
-                // Parse dates as local time in user's timezone, then convert to UTC for storage
-                $startDateTime = Carbon::parse($validated['start_date'], $userTimezone)->utc();
-                $endDateTime = Carbon::parse($validated['end_date'], $userTimezone)->utc();
+                // Parse dates as local time in specified timezone, then convert to UTC for storage
+                $startDateTime = Carbon::parse($validated['start_at'], $timezone)->utc();
+                $endDateTime = Carbon::parse($validated['end_at'], $timezone)->utc();
 
                 // Create the event
                 $event = Event::create([
                     'calendar_id' => $calendar->id,
                     'title' => $validated['title'],
-                    'description_md' => $validated['description'],
+                    'description_md' => $validated['description_md'],
                     'start_at' => $startDateTime,
                     'end_at' => $endDateTime,
                     'location' => null,
-                    'all_day' => false,
-                    'timezone' => $userTimezone,
-                    'is_private' => false,
+                    'all_day' => $validated['all_day'] ?? false,
+                    'timezone' => $timezone,
+                    'is_private' => $validated['is_private'] ?? false,
                 ]);
 
                 Log::info('Event created successfully', [
                     'event_id' => $event->id,
                     'user_id' => $user->id,
                     'calendar_id' => $calendar->id,
-                    'title' => $event->title
+                    'title' => $event->title,
+                    'timezone' => $timezone
                 ]);
 
                 return response()->json([
@@ -270,6 +274,7 @@ class DashboardController extends Controller
                         'title' => $event->title,
                         'start_at' => $event->start_at,
                         'end_at' => $event->end_at,
+                        'timezone' => $timezone,
                         'calendar_id' => $calendar->id,
                         'calendar_name' => $calendar->name,
                     ]
@@ -297,9 +302,12 @@ class DashboardController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'description' => 'nullable|string|max:1000',
+            'start_at' => 'required|date',
+            'end_at' => 'required|date|after_or_equal:start_at',
+            'timezone' => 'nullable|string|max:64',
+            'description_md' => 'nullable|string|max:1000',
+            'all_day' => 'boolean',
+            'is_private' => 'boolean',
         ]);
 
         try {
@@ -311,25 +319,29 @@ class DashboardController extends Controller
                     $query->where('owner_user_id', $user->id);
                 })->findOrFail($id);
 
-                // Get user timezone, default to Asia/Jakarta (WIB)
-                $userTimezone = $user->timezone ?? 'Asia/Jakarta';
+                // Get timezone from request or use existing event timezone, default to user timezone
+                $timezone = $validated['timezone'] ?? $event->timezone ?? $user->timezone ?? 'Asia/Jakarta';
                 
-                // Parse dates as local time in user's timezone, then convert to UTC for storage
-                $startDateTime = Carbon::parse($validated['start_date'], $userTimezone)->utc();
-                $endDateTime = Carbon::parse($validated['end_date'], $userTimezone)->utc();
+                // Parse dates as local time in specified timezone, then convert to UTC for storage
+                $startDateTime = Carbon::parse($validated['start_at'], $timezone)->utc();
+                $endDateTime = Carbon::parse($validated['end_at'], $timezone)->utc();
 
                 // Update the event
                 $event->update([
                     'title' => $validated['title'],
-                    'description_md' => $validated['description'],
+                    'description_md' => $validated['description_md'],
                     'start_at' => $startDateTime,
                     'end_at' => $endDateTime,
+                    'timezone' => $timezone,
+                    'all_day' => $validated['all_day'] ?? $event->all_day,
+                    'is_private' => $validated['is_private'] ?? $event->is_private,
                 ]);
 
                 Log::info('Event updated successfully', [
                     'event_id' => $event->id,
                     'user_id' => $user->id,
-                    'title' => $event->title
+                    'title' => $event->title,
+                    'timezone' => $timezone
                 ]);
 
                 return response()->json([
@@ -339,6 +351,7 @@ class DashboardController extends Controller
                         'title' => $event->title,
                         'start_at' => $event->start_at,
                         'end_at' => $event->end_at,
+                        'timezone' => $timezone,
                         'calendar_id' => $event->calendar_id,
                         'calendar_name' => $event->calendar->name,
                     ]

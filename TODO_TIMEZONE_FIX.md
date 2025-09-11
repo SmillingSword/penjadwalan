@@ -18,8 +18,8 @@
 - [x] Add user timezone detection from props/auth
 - [x] Improve timezone handling when creating/editing events
 - [x] Add browser timezone fallback detection
-- [ ] Test event creation with different timezones
-- [ ] Test event editing to ensure correct time display
+- [x] Test event creation with different timezones
+- [x] Test event editing to ensure correct time display
 
 ### 📋 Files to Modify
 - `resources/js/Components/EventModal.vue` - Main timezone fix
