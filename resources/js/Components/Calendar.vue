@@ -67,12 +67,22 @@
             <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
             <span class="text-sm text-indigo-100">{{ eventsCount }} events this month</span>
           </div>
+          
+          <!-- Swipe instruction for mobile -->
+          <div class="swipe-instruction md:hidden">
+            ← Swipe to navigate months →
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Main Calendar Grid -->
-    <div class="calendar-grid bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+    <div 
+      class="calendar-grid bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+    >
       <!-- Days of Week Header -->
       <div class="days-header bg-gradient-to-r from-gray-50 to-blue-50 grid grid-cols-7 border-b border-gray-200">
         <div 
@@ -478,6 +488,14 @@ const newEvent = reactive({
   description: '',
   date: ''
 })
+
+// Touch/Swipe handling for mobile
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const touchEndX = ref(0)
+const touchEndY = ref(0)
+const minSwipeDistance = 50
+const maxVerticalDistance = 100
 
 // Events data from API
 const events = ref([])
@@ -891,6 +909,62 @@ const formatDate = (dateString) => {
   })
 }
 
+// Touch/Swipe handling methods
+const handleTouchStart = (event) => {
+  const touch = event.touches[0]
+  touchStartX.value = touch.clientX
+  touchStartY.value = touch.clientY
+}
+
+const handleTouchMove = (event) => {
+  // Prevent default scrolling behavior during swipe
+  if (Math.abs(event.touches[0].clientX - touchStartX.value) > 10) {
+    event.preventDefault()
+  }
+}
+
+const handleTouchEnd = (event) => {
+  const touch = event.changedTouches[0]
+  touchEndX.value = touch.clientX
+  touchEndY.value = touch.clientY
+  
+  handleSwipeGesture()
+}
+
+const handleSwipeGesture = () => {
+  const deltaX = touchEndX.value - touchStartX.value
+  const deltaY = touchEndY.value - touchStartY.value
+  
+  // Check if it's a horizontal swipe (not vertical scroll)
+  if (Math.abs(deltaY) > maxVerticalDistance) {
+    return // Too much vertical movement, probably a scroll
+  }
+  
+  // Check if swipe distance is sufficient
+  if (Math.abs(deltaX) < minSwipeDistance) {
+    return // Swipe distance too small
+  }
+  
+  // Determine swipe direction and navigate
+  if (deltaX > 0) {
+    // Swipe right - go to previous month
+    previousMonth()
+    
+    // Show feedback toast
+    if (window.toast) {
+      window.toast.info('Previous Month', 'Swiped to previous month')
+    }
+  } else {
+    // Swipe left - go to next month
+    nextMonth()
+    
+    // Show feedback toast
+    if (window.toast) {
+      window.toast.info('Next Month', 'Swiped to next month')
+    }
+  }
+}
+
 // API functions
 const fetchEvents = async () => {
   isLoading.value = true
@@ -1265,6 +1339,92 @@ watch(currentDate, () => {
     width: 2rem;
     height: 2rem;
   }
+}
+
+/* Touch/Swipe enhancements */
+.calendar-grid {
+  touch-action: pan-y; /* Allow vertical scrolling but handle horizontal swipes */
+  user-select: none; /* Prevent text selection during swipe */
+}
+
+.calendar-grid.swiping {
+  transition: transform 0.3s ease-out;
+}
+
+/* Swipe indicator */
+.swipe-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(99, 102, 241, 0.9);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.swipe-indicator.left {
+  left: 1rem;
+}
+
+.swipe-indicator.right {
+  right: 1rem;
+}
+
+.swipe-indicator.show {
+  opacity: 1;
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  .calendar-grid {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Add subtle hint for swipe gesture */
+  .calendar-grid::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), transparent);
+    z-index: 1;
+    animation: swipe-hint 3s ease-in-out infinite;
+  }
+  
+  .calendar-header {
+    position: relative;
+  }
+  
+  /* Add swipe instruction for first-time users */
+  .swipe-instruction {
+    position: absolute;
+    bottom: -2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    animation: fade-in-out 4s ease-in-out infinite;
+  }
+}
+
+@keyframes swipe-hint {
+  0%, 100% { opacity: 0; transform: translateX(-100%); }
+  50% { opacity: 1; transform: translateX(100%); }
+}
+
+@keyframes fade-in-out {
+  0%, 70%, 100% { opacity: 0; }
+  10%, 60% { opacity: 1; }
 }
 
 /* Custom scrollbar */
