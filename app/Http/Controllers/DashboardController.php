@@ -109,7 +109,7 @@ class DashboardController extends Controller
         // Get all users for chat (online and offline)
         $allUsers = User::where('id', '!=', $user->id)
             ->select('id', 'name', 'email', 'avatar', 'online_status', 'status_message', 'last_seen_at', 'is_online')
-            ->orderByRaw('is_online DESC, last_seen_at DESC NULLS LAST')
+            ->orderByRaw('is_online DESC, IFNULL(last_seen_at, "1970-01-01") DESC')
             ->get()
             ->map(function($chatUser) {
                 // More flexible online status logic for initial load
