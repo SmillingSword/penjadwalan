@@ -242,9 +242,17 @@ class DashboardController extends Controller
                 // Get timezone from request or user preference, default to Asia/Jakarta
                 $timezone = $validated['timezone'] ?? $user->timezone ?? 'Asia/Jakarta';
                 
-                // Parse dates as local time in specified timezone, then convert to UTC for storage
-                $startDateTime = Carbon::parse($validated['start_at'], $timezone)->utc();
-                $endDateTime = Carbon::parse($validated['end_at'], $timezone)->utc();
+                // Handle date parsing based on whether the event is all-day
+                if ($validated['all_day'] ?? false) {
+                    // For all-day events, trust the date part of the string to avoid timezone shifts.
+                    // Create a Carbon instance from the 'Y-m-d' part, parsed as UTC.
+                    $startDateTime = Carbon::parse(substr($validated['start_at'], 0, 10))->startOfDay();
+                    $endDateTime = Carbon::parse(substr($validated['end_at'], 0, 10))->endOfDay();
+                } else {
+                    // For timed events, respect the user's timezone and convert their local time to UTC.
+                    $startDateTime = Carbon::parse($validated['start_at'], $timezone)->utc();
+                    $endDateTime = Carbon::parse($validated['end_at'], $timezone)->utc();
+                }
 
                 // Create the event
                 $event = Event::create([
@@ -322,9 +330,16 @@ class DashboardController extends Controller
                 // Get timezone from request or use existing event timezone, default to user timezone
                 $timezone = $validated['timezone'] ?? $event->timezone ?? $user->timezone ?? 'Asia/Jakarta';
                 
-                // Parse dates as local time in specified timezone, then convert to UTC for storage
-                $startDateTime = Carbon::parse($validated['start_at'], $timezone)->utc();
-                $endDateTime = Carbon::parse($validated['end_at'], $timezone)->utc();
+                // Handle date parsing based on whether the event is all-day
+                if ($validated['all_day'] ?? $event->all_day ?? false) {
+                    // For all-day events, trust the date part of the string to avoid timezone shifts.
+                    $startDateTime = Carbon::parse(substr($validated['start_at'], 0, 10))->startOfDay();
+                    $endDateTime = Carbon::parse(substr($validated['end_at'], 0, 10))->endOfDay();
+                } else {
+                    // For timed events, respect the user's timezone and convert their local time to UTC.
+                    $startDateTime = Carbon::parse($validated['start_at'], $timezone)->utc();
+                    $endDateTime = Carbon::parse($validated['end_at'], $timezone)->utc();
+                }
 
                 // Update the event
                 $event->update([

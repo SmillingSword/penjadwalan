@@ -638,9 +638,13 @@ const calendarDays = computed(() => {
     const date = new Date(startDate)
     date.setDate(startDate.getDate() + i)
     
+    const localYear = date.getFullYear();
+    const localMonth = (date.getMonth() + 1).toString().padStart(2, '0');
+    const localDay = date.getDate().toString().padStart(2, '0');
+
     days.push({
       date: date.getDate(),
-      fullDate: date.toISOString().split('T')[0],
+      fullDate: `${localYear}-${localMonth}-${localDay}`,
       isCurrentMonth: date.getMonth() === month,
       isToday: date.toDateString() === today.toDateString(),
       dateObj: new Date(date)
